@@ -11,7 +11,7 @@
 
         window.addEventListener("load", start);
         function start() {
-            var request = indexedDB.open("nickflorDB");            
+            var request = indexedDB.open("nickflorDB"); // I'd be flattered, but you should replace this w/ YOURNAMEDB 
             request.onupgradeneeded = createDB;
             request.onsuccess = function (e) {
                 db = e.target.result;
@@ -84,7 +84,7 @@
             }
         }
 
-        function deleteDB(e) {
+        function deleteDB(e) { // This deletes a record, to delete the database you have to do so in the browser
             db.transaction("guestbook", "readwrite").objectStore("guestbook").delete(parseInt(spID.innerHTML));
             listDB();
         }
@@ -108,7 +108,7 @@
             */
 
             var index = db.transaction("guestbook").objectStore("guestbook").index("idxGuestName"); // this is the index example
-            var idbkr = IDBKeyRange.lowerBound("Nancy"); // Note: types must match, null if empty
+            var idbkr = IDBKeyRange.lowerBound("Nancy"); // Note: types must match, null if empty, you can only search one index
             index.openCursor(idbkr).onsuccess = function (e) {
                 cursor = e.target.result;
                 if (cursor != null) {
