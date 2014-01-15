@@ -1,0 +1,143 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title></title>
+    <script>
+        // Reference: http://msdn.microsoft.com/en-us/library/ie/hh772651(v=vs.85).aspx "Indexed Database API"
+        // Best Example: https://developer.mozilla.org/en-US/docs/IndexedDB/Using_IndexedDB
+        // Should know about objects: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Working_with_Objects
+
+        var db; // your database
+
+        window.addEventListener("load", start);
+        function start() {
+            var request = indexedDB.open("nickflorDB");            
+            request.onupgradeneeded = createDB;
+            request.onsuccess = function (e) {
+                db = e.target.result;
+            }
+            request.onerror = function (e) {
+                db = null;
+            }
+
+            btnStore.addEventListener("click", storeDB);
+            btnList.addEventListener("click", listDB);
+            btnOne.addEventListener("click", getOne);
+            btnUpdate.addEventListener("click", updateDB);
+            btnDelete.addEventListener("click", deleteDB);
+            btnSearch.addEventListener("click", searchTester);
+        }
+
+        function createDB(e) {
+            var db = e.target.result; // request.result            
+            var ostore = db.createObjectStore("guestbook", { keyPath: "guestid", autoIncrement: true }); // note this makes it an int
+            ostore.createIndex("idxGuestName", "guestname");
+        }
+        
+        function storeDB(e) {
+            var ostore = db.transaction("guestbook", "readwrite").objectStore("guestbook"); // can omit readwrite if just reading
+            var rec= new Object();
+            rec.guestname = inName.value;
+            rec.guestage = inAge.value;
+            rec.guestcomment = inComment.value;
+            var now = new Date();
+            rec.guestdate = (now.getMonth() + 1) + "/" + now.getDate() + "/" + now.getFullYear();
+            ostore.add(rec);
+            inName.value = "";
+            inAge.value = "";
+            inComment.value = "";
+            listDB();
+        }
+
+        function listDB(e) {
+            dvResults.innerHTML = "";
+            var ostore = db.transaction("guestbook").objectStore("guestbook");
+            ostore.openCursor().onsuccess = function (e) { // gets called for every record!
+                var cursor = e.target.result;
+                if (cursor != null) {
+                    dvResults.innerHTML += cursor.value.guestid + "," + cursor.value.guestname + "," + cursor.value.guestage + "," + cursor.value.guestcomment + "," + cursor.value.guestdate;
+                    dvResults.innerHTML += "<br />";
+                    cursor.continue();
+                }
+            }
+        }
+
+        function getOne(e) {
+                db.transaction("guestbook").objectStore("guestbook").get(parseInt(inOne.value)).onsuccess = function (e) { // need to parseint on key
+                var cursor = e.target.result;
+                spID.innerHTML = cursor.guestid;
+                inName.value = cursor.guestname;
+                inAge.value = cursor.guestage;
+                inComment.value = cursor.guestcomment;
+                spDate.innerHTML = cursor.guestdate;
+            }
+        }
+
+        function updateDB(e) {
+            db.transaction("guestbook", "readwrite").objectStore("guestbook").get(parseInt(spID.innerHTML)).onsuccess = function (e) {
+                var cursor = e.target.result;
+                cursor.guestname = inName.value;
+                cursor.guestage = inAge.value;
+                cursor.guestcomment = inComment.value;
+                db.transaction("guestbook", "readwrite").objectStore("guestbook").put(cursor);
+                listDB();
+            }
+        }
+
+        function deleteDB(e) {
+            db.transaction("guestbook", "readwrite").objectStore("guestbook").delete(parseInt(spID.innerHTML));
+            listDB();
+        }
+
+        function searchTester(e) {
+            dvResults.innerHTML = "";
+            //var idbkr = IDBKeyRange.lowerBound(3);
+
+            /*
+            var idbkr = IDBKeyRange.bound(4, 7); // this is the key example, NOTE types must match
+           
+            db.transaction("guestbook").objectStore("guestbook").openCursor(idbkr,"prev").onsuccess = function (e) { // prev is desc, empty is asc
+                cursor = e.target.result;
+                if (cursor != null) {
+                    var rec = cursor.value;
+                    dvResults.innerHTML += rec.guestid + "," + rec.guestname + "," + rec.guestage + "," + rec.guestcomment + "," + rec.guestdate;
+                    dvResults.innerHTML += "<br />";
+                    cursor.continue();
+                }
+            }
+            */
+
+            var index = db.transaction("guestbook").objectStore("guestbook").index("idxGuestName"); // this is the index example
+            var idbkr = IDBKeyRange.lowerBound("Nancy"); // Note: types must match, null if empty
+            index.openCursor(idbkr).onsuccess = function (e) {
+                cursor = e.target.result;
+                if (cursor != null) {
+                    var rec = cursor.value;
+                    dvResults.innerHTML += rec.guestid + "," + rec.guestname + "," + rec.guestage + "," + rec.guestcomment + "," + rec.guestdate;
+                    dvResults.innerHTML += "<br />";
+                    cursor.continue();
+                }
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>Store</h1>
+    Id: <span id="spID"></span><br />
+    Name: <input type="text" id="inName" /><br />
+    Age: <input type="text" id="inAge" /><br />
+    Comment: <input type="text" id="inComment" /><br />
+    Date: <span id="spDate"></span><br />
+    <input type="button" id="btnStore" value="Store" />
+    <input type="button" id="btnUpdate" value="Update" />
+    <input type="button" id="btnDelete" value="Delete" />
+    <input type="button" id="btnSearch" value="Search Tester" />
+    <h1>Get One</h1>
+    <input type="text" id="inOne" />
+    <input type="button" id="btnOne" value="Get Single" />    
+    <h1>Retrieve</h1>
+    <input type="button" id="btnList" value="Retrieve" />
+    <hr />
+    <div id="dvResults"></div>
+</body>
+</html>
